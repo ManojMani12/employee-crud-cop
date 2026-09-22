@@ -103,6 +103,25 @@ No schema, relationship, or persistence behavior changes are introduced.
 - **Scaling:** No scaling changes are needed; the existing stateless REST service and database deployment model remain intact.
 - **Deployment:** Build artifacts contain configuration placeholders only; credentials are injected at process startup.
 
+## Startup Failure and Observability
+
+- Missing or malformed datasource settings cause startup to fail rather than falling back to defaults.
+- Startup diagnostics may identify only the variable name, failure category, application environment, and remediation guidance. They must never include variable values, passwords, usernames, complete JDBC URLs, connection strings, or nested exception text that may contain them.
+- Missing configuration is classified as a permanent configuration failure. Database authentication, DNS, or connectivity failures are classified as database connection failures; the process exits and deployment supervision determines whether to restart it, without application-level indefinite retries.
+- Deployment or process supervision detects a non-zero startup exit and raises the environment's standard deployment alert. Operators correct missing or malformed environment variables or restore database availability before restarting the service.
+- Existing framework startup logs and deployment health reporting are the operational integration points. Readiness is considered unavailable until datasource initialization succeeds; no new endpoint or monitoring service is introduced for this configuration-only change.
+
+## Verification Matrix
+
+| Scenario | Expected result |
+|---|---|
+| `DB_URL`, `DB_USERNAME`, and `DB_PASSWORD` are valid | Application starts and connects to MySQL. |
+| Each required variable is missing individually | Startup fails and identifies only the missing variable name. |
+| URL is malformed or credentials are invalid | Startup fails with a safe failure category; no value, password, username, or full URL is exposed. |
+| Production variables are absent during tests | Existing H2 test configuration keeps tests independent of production variables. |
+| Existing employee API workflows execute | Existing responses and persistence behavior remain unchanged. |
+| Tracked-file secret scan runs | Scan passes with no plaintext database credentials found. |
+
 ## Key Design Decisions
 
 - **AD-001: Use Spring property placeholders.** Spring Boot already supports environment-variable resolution, minimizing implementation risk and avoiding custom configuration code.
