@@ -20,9 +20,7 @@ class DatasourceConfigurationSafetyTest {
                     "spring.datasource.url=${DB_URL}",
                     "spring.datasource.username=${DB_USERNAME}",
                     "spring.datasource.password=${DB_PASSWORD}",
-                    "spring.datasource.driver-class-name=org.h2.Driver",
-                    "spring.jpa.database-platform=org.hibernate.dialect.H2Dialect",
-                    "spring.jpa.hibernate.ddl-auto=create-drop");
+                    "spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver");
 
     @Test
     void mainConfigurationRequiresAllDatabaseEnvironmentVariables() throws IOException {
