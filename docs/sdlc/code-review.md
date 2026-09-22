@@ -2,30 +2,29 @@
 
 ## Review Summary
 
-**Changes Requested.** The implementation removes the committed production credentials and the backend regression suite passes, but the review found production-validation, test-coverage, and operational-verification gaps that must be resolved before the pull request.
+**Changes Requested.** The implementation removes the committed production credentials, restricts the H2 bypass to the explicit `test` profile, and the backend regression suite passes. Two test-quality gaps remain before pull-request approval: complete diagnostic redaction assertions and direct process-environment coverage.
 
 ## Findings Table
 
 | # | Area | Verdict | File:Line | Detail | Suggestion |
 |---|---|---|---|---|---|
-| 1 | Correctness | WARN | `springboot-backend/src/main/resources/application.properties:2-4`; `docs/sdlc/impl-plan.md:73-85` | Valid MySQL startup and connectivity were not verified because no local MySQL listener was available. Acceptance Criterion 2 remains environment-limited. | Run the application with valid externally supplied MySQL variables and an available database, or keep this as an explicitly unresolved acceptance-criteria limitation before PR approval. |
-| 2 | Security | FAIL | `springboot-backend/src/main/java/com/Jonas/springbootbackend/config/DatabaseConfigurationValidator.java:20-22` | Validation is skipped solely when the datasource driver is `org.h2.Driver`. An external runtime override could select H2 and bypass required credential checks outside tests. | Restrict the H2 bypass to an explicit test profile or test-only configuration; never use a runtime-selectable driver value as the security boundary. |
-| 3 | Error Handling | WARN | `springboot-backend/src/test/java/com/Jonas/springbootbackend/DatasourceConfigurationSafetyTest.java:43-82` | Tests assert only that one synthetic password is absent. They do not verify that usernames, complete JDBC URLs, connection strings, or nested exception details are excluded from diagnostics. | Add assertions for all secret-bearing values and safe failure categories for missing and malformed configuration. |
-| 4 | Test Coverage | WARN | `springboot-backend/src/test/java/com/Jonas/springbootbackend/DatasourceConfigurationSafetyTest.java:16-28` | Tests inject `DB_*` values as Spring properties, not actual process environment variables, and no positive MySQL startup test exists. | Add a test or executable verification that supplies real process environment variables, plus a valid MySQL connectivity test when infrastructure is available. |
-| 5 | Code Clarity | WARN | `springboot-backend/src/main/java/com/Jonas/springbootbackend/config/DatabaseConfigurationValidator.java:20-22` | The driver-based H2 shortcut obscures the distinction between test configuration and production runtime. | Use an explicit test profile or isolated test configuration so production validation reads as unconditional. |
+| 1 | Correctness | PASS | `springboot-backend/src/main/java/com/Jonas/springbootbackend/config/DatabaseConfigurationValidator.java:21-23`; `docs/sdlc/impl-plan.md:73-85` | The explicit test profile boundary prevents driver overrides from bypassing production validation. Live MySQL connectivity remains unavailable on this machine and is explicitly accepted. | No code change required; retain the documented environment limitation. |
+| 2 | Security | PASS | `springboot-backend/src/main/java/com/Jonas/springbootbackend/config/DatabaseConfigurationValidator.java:21-34` | Required-variable validation is skipped only for the explicit `test` profile; selecting the H2 driver alone no longer bypasses it. | No change required. |
+| 3 | Error Handling | WARN | `springboot-backend/src/test/java/com/Jonas/springbootbackend/DatasourceConfigurationSafetyTest.java:44-93` | Tests still assert only that one synthetic password is absent. They do not verify that usernames, full JDBC URLs, connection strings, or nested exception messages are excluded. | Add assertions over the complete failure cause chain or introduce a safe exception boundary and test it. |
+| 4 | Test Coverage | WARN | `springboot-backend/src/test/java/com/Jonas/springbootbackend/DatasourceConfigurationSafetyTest.java:18-29` | Tests inject `DB_*` values as Spring properties rather than actual process environment variables, and no positive MySQL startup test exists. The unavailable MySQL listener is accepted, but environment binding remains partially unverified. | Add process-environment coverage; add a positive MySQL test when infrastructure becomes available. |
+| 5 | Code Clarity | PASS | `springboot-backend/src/main/java/com/Jonas/springbootbackend/config/DatabaseConfigurationValidator.java:21-23` | The explicit profile check clearly separates test configuration from production runtime. | No change required. |
 | 6 | DRY Principle | PASS | `springboot-backend/src/main/java/com/Jonas/springbootbackend/config/DatabaseConfigurationValidator.java:36-47` | Required-variable checking is centralized in one validator and does not duplicate datasource logic. | No change required. |
 | 7 | Dependency Safety | PASS | `springboot-backend/pom.xml:1-75` | No new dependency was introduced; the existing Spring Boot, MySQL, and test-scoped H2 dependencies match the approved architecture. | Continue using the existing dependency set and review upgrades separately. |
 
 ## Critical Issues
 
-1. Constrain the H2 bypass in `DatabaseConfigurationValidator` to an explicit test-only profile or configuration path so production cannot bypass required credential validation through runtime datasource overrides.
-2. Complete valid MySQL startup/connectivity verification with externally supplied credentials and an available database, or obtain explicit acceptance of the unresolved Criterion 2 limitation before PR approval.
+1. Expand safety tests to assert that usernames, complete JDBC URLs, connection strings, and nested database exception text are not exposed.
+2. Add process-environment coverage for `DB_URL`, `DB_USERNAME`, and `DB_PASSWORD`. A positive MySQL startup test remains environment-dependent and is explicitly accepted as unavailable on this machine.
 
 ## Improvement Suggestions
 
-- Expand safety tests to assert that usernames, complete JDBC URLs, connection strings, and nested database exception text are not exposed.
-- Add process-environment coverage rather than relying only on `ApplicationContextRunner` property injection.
-- Update the root README command to show changing into `springboot-backend` before invoking `mvnw.cmd`.
+- Add a positive MySQL startup test when a suitable database environment is available.
+- Keep the accepted MySQL connectivity limitation visible in implementation evidence.
 
 ## Commendations
 
@@ -33,3 +32,4 @@
 - The README clearly prohibits committing or logging database secrets.
 - H2 remains test-scoped and independent of production credentials.
 - The implementation evidence transparently records the unavailable local MySQL dependency instead of claiming a successful production connectivity test.
+- The explicit test-profile boundary prevents a runtime driver override from disabling production credential validation.
