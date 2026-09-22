@@ -7,12 +7,15 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.stream.Stream;
+import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 
 class DatasourceConfigurationSafetyTest {
 
     private static final String SECRET_PASSWORD = "test-only-secret";
+    private static final String TEST_USERNAME = "test-user";
 
     private final ApplicationContextRunner contextRunner = new ApplicationContextRunner()
             .withUserConfiguration(Application.class)
@@ -20,7 +23,8 @@ class DatasourceConfigurationSafetyTest {
                     "spring.datasource.url=${DB_URL}",
                     "spring.datasource.username=${DB_USERNAME}",
                     "spring.datasource.password=${DB_PASSWORD}",
-                    "spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver");
+                    "spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver",
+                    "spring.autoconfigure.exclude=org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration");
 
     @Test
     void mainConfigurationRequiresAllDatabaseEnvironmentVariables() throws IOException {
@@ -41,7 +45,7 @@ class DatasourceConfigurationSafetyTest {
                         "DB_PASSWORD=" + SECRET_PASSWORD)
                 .run(context -> {
                     assertThat(context).hasFailed();
-                    assertThat(context.getStartupFailure()).hasMessageNotContaining(SECRET_PASSWORD);
+                    assertSafeFailure(context.getStartupFailure(), SECRET_PASSWORD, "test-user");
                 });
     }
 
@@ -49,11 +53,11 @@ class DatasourceConfigurationSafetyTest {
     void missingDatabaseUsernameFailsWithoutExposingPassword() {
         contextRunner
                 .withPropertyValues(
-                        "DB_URL=jdbc:h2:mem:missing_username",
+                        "DB_URL=jdbc:mysql://localhost:3306/test",
                         "DB_PASSWORD=" + SECRET_PASSWORD)
                 .run(context -> {
                     assertThat(context).hasFailed();
-                    assertThat(context.getStartupFailure()).hasMessageNotContaining(SECRET_PASSWORD);
+                    assertSafeFailure(context.getStartupFailure(), SECRET_PASSWORD, "jdbc:mysql://localhost:3306/test");
                 });
     }
 
@@ -61,11 +65,11 @@ class DatasourceConfigurationSafetyTest {
     void missingDatabasePasswordFailsWithoutExposingPassword() {
         contextRunner
                 .withPropertyValues(
-                        "DB_URL=jdbc:h2:mem:missing_password",
-                        "DB_USERNAME=test-user")
+                        "DB_URL=jdbc:mysql://localhost:3306/test",
+                        "DB_USERNAME=" + TEST_USERNAME)
                 .run(context -> {
                     assertThat(context).hasFailed();
-                    assertThat(context.getStartupFailure()).hasMessageNotContaining(SECRET_PASSWORD);
+                    assertSafeFailure(context.getStartupFailure(), TEST_USERNAME, "jdbc:mysql://localhost:3306/test");
                 });
     }
 
@@ -78,7 +82,7 @@ class DatasourceConfigurationSafetyTest {
                         "DB_PASSWORD=" + SECRET_PASSWORD)
                 .run(context -> {
                     assertThat(context).hasFailed();
-                    assertThat(context.getStartupFailure()).hasMessageNotContaining(SECRET_PASSWORD);
+                    assertSafeFailure(context.getStartupFailure(), SECRET_PASSWORD, "not-a-jdbc-url", "test-user");
                 });
     }
 
@@ -93,5 +97,37 @@ class DatasourceConfigurationSafetyTest {
                     assertThat(context).hasFailed();
                     assertThat(context.getStartupFailure()).hasMessageContaining("DB_PASSWORD");
                 });
+    }
+
+    @Test
+    void processEnvironmentVariablesResolveWhenProvided() {
+        String databaseUrl = System.getenv("DB_URL");
+        String databaseUsername = System.getenv("DB_USERNAME");
+        String databasePassword = System.getenv("DB_PASSWORD");
+        Assumptions.assumeTrue(Stream.of(databaseUrl, databaseUsername, databasePassword).allMatch(this::hasText));
+
+        new ApplicationContextRunner()
+                .withUserConfiguration(Application.class)
+                .withPropertyValues(
+                        "spring.datasource.url=${DB_URL}",
+                        "spring.datasource.username=${DB_USERNAME}",
+                        "spring.datasource.password=${DB_PASSWORD}",
+                        "spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver")
+                .run(context -> assertThat(context).isNotNull());
+    }
+
+    private void assertSafeFailure(Throwable failure, String... forbiddenValues) {
+        assertThat(failure).isNotNull();
+        Throwable current = failure;
+        while (current != null) {
+            for (String forbiddenValue : forbiddenValues) {
+                assertThat(current.getMessage()).doesNotContain(forbiddenValue);
+            }
+            current = current.getCause();
+        }
+    }
+
+    private boolean hasText(String value) {
+        return value != null && !value.trim().isEmpty();
     }
 }

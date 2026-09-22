@@ -31,6 +31,11 @@ public class DatabaseConfigurationValidator {
             throw new IllegalStateException(
                     "Missing required database environment variable(s): " + String.join(", ", missingVariables));
         }
+
+        String databaseUrl = environment.getProperty("DB_URL");
+        if (!databaseUrl.startsWith("jdbc:mysql://")) {
+            throw new IllegalStateException("Invalid DB_URL format; expected a MySQL JDBC URL");
+        }
     }
 
     private void addIfBlank(List<String> missingVariables, String variableName) {
