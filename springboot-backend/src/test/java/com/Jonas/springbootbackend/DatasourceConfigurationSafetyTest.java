@@ -45,7 +45,7 @@ class DatasourceConfigurationSafetyTest {
                         "DB_PASSWORD=" + SECRET_PASSWORD)
                 .run(context -> {
                     assertThat(context).hasFailed();
-                    assertSafeFailure(context.getStartupFailure(), SECRET_PASSWORD, "test-user");
+                    assertSafeFailure(context.getStartupFailure(), SECRET_PASSWORD, "test-user", "jdbc:mysql://");
                 });
     }
 
