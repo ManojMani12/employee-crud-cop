@@ -113,7 +113,7 @@ class DatasourceConfigurationSafetyTest {
                         "spring.datasource.username=${DB_USERNAME}",
                         "spring.datasource.password=${DB_PASSWORD}",
                         "spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver")
-                .run(context -> assertThat(context).isNotNull());
+            .run(context -> assertThat(context).hasNotFailed());
     }
 
     private void assertSafeFailure(Throwable failure, String... forbiddenValues) {
