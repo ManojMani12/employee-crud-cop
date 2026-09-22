@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 import javax.annotation.PostConstruct;
 import org.springframework.core.env.Environment;
+import org.springframework.core.env.Profiles;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -17,7 +18,7 @@ public class DatabaseConfigurationValidator {
 
     @PostConstruct
     void validate() {
-        if ("org.h2.Driver".equals(environment.getProperty("spring.datasource.driver-class-name"))) {
+        if (environment.acceptsProfiles(Profiles.of("test"))) {
             return;
         }
 

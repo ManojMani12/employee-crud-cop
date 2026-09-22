@@ -70,9 +70,9 @@ The implementation plan is complete when:
 
 ## Implementation Evidence
 
-- **Focused safety tests:** `springboot-backend\\mvnw.cmd -Dtest=DatasourceConfigurationSafetyTest test` with process-local `JAVA_HOME=C:\\Program Files\\Java\\jdk-21.0.11`: 5 tests passed, 0 failures, 0 errors, 0 skipped.
-- **Full backend regression:** `springboot-backend\\mvnw.cmd test` with the same process-local `JAVA_HOME`: 6 tests passed, 0 failures, 0 errors, 0 skipped. Existing H2 context tests passed without production database variables.
-- **Live MySQL connectivity:** TCP probe to `localhost:3306` was unreachable. Valid MySQL startup/connectivity could not be executed because no local database listener was available; no credentials were requested or used.
+- **Focused safety tests:** `springboot-backend\\mvnw.cmd -Dtest=DatasourceConfigurationSafetyTest test` with process-local `JAVA_HOME=C:\\Program Files\\Java\\jdk-21.0.11`: 6 tests passed, 0 failures, 0 errors, 0 skipped, including the test-profile bypass regression case.
+- **Full backend regression:** `springboot-backend\\mvnw.cmd test` with the same process-local `JAVA_HOME`: 7 tests passed, 0 failures, 0 errors, 0 skipped. Existing H2 context tests passed with the explicit `test` profile and without production database variables.
+- **Live MySQL connectivity:** TCP probe to `localhost:3306` was unreachable. Per approved implementation direction, live MySQL startup/connectivity is skipped on this machine; no credentials were requested or used.
 - **Tracked-file scan:** `git ls-files` defined the 46-file scan boundary. Checks found no `spring.datasource.password=123456`, no hardcoded production datasource credentials, no tracked `target/` build output, and no credential-like literals beyond placeholders or safe test values. Git history remediation was not performed, as required.
 - **Formatting and diagnostics:** `cmd /c "git diff --check 2>NUL"` passed, and editor diagnostics reported no errors in the validator or safety test.
 

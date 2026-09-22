@@ -81,4 +81,17 @@ class DatasourceConfigurationSafetyTest {
                     assertThat(context.getStartupFailure()).hasMessageNotContaining(SECRET_PASSWORD);
                 });
     }
+
+    @Test
+    void h2DriverWithoutTestProfileStillRequiresDatabasePassword() {
+        contextRunner
+                .withPropertyValues(
+                        "spring.datasource.driver-class-name=org.h2.Driver",
+                        "DB_URL=jdbc:h2:mem:driver_override",
+                        "DB_USERNAME=test-user")
+                .run(context -> {
+                    assertThat(context).hasFailed();
+                    assertThat(context.getStartupFailure()).hasMessageContaining("DB_PASSWORD");
+                });
+    }
 }

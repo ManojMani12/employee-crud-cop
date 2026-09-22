@@ -47,6 +47,7 @@ DB_PASSWORD=<database-password>
 On Windows PowerShell, for example:
 
 ```powershell
+Set-Location .\springboot-backend
 $env:DB_URL = "jdbc:mysql://<host>:<port>/<database>?useSSL=false"
 $env:DB_USERNAME = "<database-username>"
 $env:DB_PASSWORD = "<database-password>"
